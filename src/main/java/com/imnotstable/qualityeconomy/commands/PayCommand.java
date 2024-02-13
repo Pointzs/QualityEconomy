@@ -22,7 +22,7 @@ public class PayCommand implements Command {
       .executesPlayer(this::togglePay))
     .then(new OfflinePlayerArgument("target")
       .replaceSuggestions(CommandUtils.getOnlinePlayerSuggestion())
-      .then(new DoubleArgument("amount", Number.getMinimumValue())
+      .then(new AmountArgument("amount")
         .executesPlayer(this::pay)));
   private boolean isRegistered = false;
   
@@ -58,7 +58,7 @@ public class PayCommand implements Command {
       Messages.sendParsedMessage(sender, MessageType.NOT_ACCEPTING_PAYMENTS);
       return;
     }
-    double amount = Number.roundObj(args.get("amount"));
+    double amount = parseAmount((String) args.get("amount"));
     if (CommandUtils.requirement(QualityEconomyAPI.hasBalance(sender.getUniqueId(), amount), MessageType.SELF_NOT_ENOUGH_MONEY, sender))
       return;
     Messages.sendParsedMessage(sender, MessageType.PAY_SEND,
@@ -71,5 +71,35 @@ public class PayCommand implements Command {
         sender.getName());
     QualityEconomyAPI.transferBalance(sender.getUniqueId(), target.getUniqueId(), amount);
   }
-  
+
+  private double parseAmount(String amountString) {
+    // Extract the number part from the string
+    String numberPart = amountString.substring(0, amountString.length() - 1);
+    // Extract the suffix character
+    char suffix = amountString.charAt(amountString.length() - 1);
+
+    // Convert the number part to double
+    double number = Double.parseDouble(numberPart);
+
+    // Determine the multiplier based on the suffix
+    double multiplier;
+    switch (suffix) {
+        case 'm':
+            multiplier = 1_000_000; // million
+            break;
+        case 'k':
+            multiplier = 1_000; // thousand
+            break;
+        case 'b':
+            multiplier = 1_000_000_000; // billion
+            break;
+        default:
+            // If an invalid suffix is provided, treat it as 1 (no suffix)
+            multiplier = 1;
+            break;
+    }
+
+    // Calculate the final amount
+    return number * multiplier;
+  }
 }
